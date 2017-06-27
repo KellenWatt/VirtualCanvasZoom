@@ -1,0 +1,180 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <style>
+        body {
+            background-color: #555;
+            overflow-y:hidden;
+        }
+        canvas {
+            background-color: white;
+        }
+    </style>
+</head>
+<body>
+    <canvas id="canvas" width="1000px" height="1000px">
+
+    </canvas>
+
+
+    <script type="text/javascript">
+        var vxMax = 10000;
+        var vyMax = 10000;
+        var scalingFactor = canvas.width / vxMax;
+        var maxScalingFactor = 5;
+        var context = canvas.getContext("2d");
+
+        var offset = {x : 0, y: 0};
+        var mouse = {x: 0, y: 0};
+        var mouseLock = {x: 0, y: 0};
+
+        // map real to virtual
+        function rmapv(x, y, ox, oy) {
+            var vx = x / scalingFactor + ox;
+            var vy = y / scalingFactor + oy;
+            return {x: vx, y: vy};
+        }
+
+        // map virtual to real
+        function vmapr(vx, vy, ox, oy) {
+            var x = (vx - ox) * scalingFactor;
+            var y = (vy - oy) * scalingFactor;
+            return {x: x, y: y};
+        }
+
+        function rscalev(n) {
+            return n * scalingFactor;
+        }
+
+        function pan(e) {
+            var m = rmapv(mouse.x, mouse.y, offset.x, offset.y);
+            var ml = rmapv(mouseLock.x, mouseLock.y, offset.x, offset.y);
+            offset.x += ml.x - m.x;
+            offset.y += ml.y - m.y;
+            if(offset.x < 0) offset.x = 0;
+            if(offset.y < 0) offset.y = 0;
+            if(offset.x + vwidth() > vxMax) offset.x = vxMax - vwidth();
+            if(offset.y + vheight() > vyMax) offset.y = vyMax - vheight();
+            mouseLock.x = mouse.x;
+            mouseLock.y = mouse.y;
+            draw();
+        }
+
+        function inDelta(n, c, d) {
+            return (n < c + d) && (n > c - d)
+        }
+
+        function vwidth() {
+            return canvas.width / scalingFactor;
+        }
+
+        function vheight() {
+            return canvas.height / scalingFactor;
+        }
+
+        canvas.addEventListener("mousemove", function(e) {
+            mouse.x = e.offsetX;
+            mouse.y = e.offsetY;
+        });
+
+        canvas.addEventListener("click", function(e) {
+            var map = rmapv(e.offsetX, e.offsetY, offset.x, offset.y);
+            console.log("vloc:", map.x, map.y);
+            console.log("offset:", offset.x, offset.y);
+        });
+
+        canvas.addEventListener("mousedown", function(e) {
+            mouseLock.x = mouse.x;
+            mouseLock.y = mouse.y;
+            canvas.addEventListener("mousemove", pan);
+        });
+
+        canvas.addEventListener("mouseup", function() {
+            canvas.removeEventListener("mousemove", pan);
+        });
+
+        canvas.addEventListener("wheel", function(e) {
+            var eloc = {x: e.offsetX, y: e.offsetY};
+            var sf = scalingFactor;
+            var map = rmapv(eloc.x, eloc.y, offset.x, offset.y);
+            var rx = (map.x - offset.x) / vwidth();
+            var ry = (map.y - offset.y) / vheight();
+            if(e.deltaY < 0) { // zoom out
+                if(!inDelta(vxMax, vwidth(), 1e-10)) {
+                    scalingFactor /= 2;
+                }
+            } else { // zoom in
+                if(scalingFactor < maxScalingFactor) {
+                    scalingFactor *= 2;
+                }
+            }
+            offset.x = map.x - rx * vwidth();
+            offset.y = map.y - ry * vheight();
+            if(offset.x < 0) offset.x = 0;
+            if(offset.y < 0) offset.y = 0;
+            if(offset.x + vwidth() > vxMax) offset.x = vxMax - vwidth();
+            if(offset.y + vheight() > vyMax) offset.y = vyMax - vheight();
+            draw();
+        });
+
+        function draw() {
+            context.clearRect(0, 0, canvas.width, canvas.height);
+            context.lineCap = "round";
+            context.lineWidth = rscalev(10);
+            context.beginPath();
+            context.strokeStyle = "black";
+            for(var i = 0; i < 20; i+=1) {
+                var map = vmapr(0, i * 500, offset.x, offset.y);
+                context.moveTo(map.x, map.y);
+                map = vmapr(10000, i * 500, offset.x, offset.y);
+                context.lineTo(map.x, map.y);
+
+                map = vmapr(i * 500, 0, offset.x, offset.y);
+                context.moveTo(map.x, map.y);
+                map = vmapr(i * 500, 10000, offset.x, offset.y);
+                context.lineTo(map.x, map.y);
+            }
+            context.stroke();
+
+            context.beginPath();
+            context.lineWidth = rscalev(30);
+            var map = vmapr(0, 5000, offset.x, offset.y);
+            context.moveTo(map.x, map.y);
+            map = vmapr(10000, 5000, offset.x, offset.y);
+            context.lineTo(map.x, map.y);
+            var map = vmapr(5000, 0, offset.x, offset.y);
+            context.moveTo(map.x, map.y);
+            map = vmapr(5000, 10000, offset.x, offset.y);
+            context.lineTo(map.x, map.y)
+            context.stroke();
+
+            context.beginPath();
+            context.strokeStyle = "red";
+            map = vmapr(2500, 0, offset.x, offset.y);
+            context.moveTo(map.x, map.y);
+            map = vmapr(2500, 10000, offset.x, offset.y);
+            context.lineTo(map.x, map.y)
+            map = vmapr(7500, 0, offset.x, offset.y);
+            context.moveTo(map.x, map.y);
+            map = vmapr(7500, 10000, offset.x, offset.y);
+            context.lineTo(map.x, map.y)
+            map = vmapr(0, 2500, offset.x, offset.y);
+            context.moveTo(map.x, map.y);
+            map = vmapr(10000, 2500, offset.x, offset.y);
+            context.lineTo(map.x, map.y)
+            map = vmapr(0, 2500, offset.x, offset.y);
+            context.moveTo(map.x, map.y);
+            map = vmapr(10000, 2500, offset.x, offset.y);
+            context.lineTo(map.x, map.y)
+            map = vmapr(0, 7500, offset.x, offset.y);
+            context.moveTo(map.x, map.y);
+            map = vmapr(10000, 7500, offset.x, offset.y);
+            context.lineTo(map.x, map.y)
+            context.stroke();
+
+        }
+        draw();
+
+    </script>
+</body>
+</html>
