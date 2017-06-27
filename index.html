@@ -18,10 +18,13 @@
 
 
     <script type="text/javascript">
+        // size limits of the virtual canvas
         var vxMax = 10000;
         var vyMax = 10000;
+        
         var scalingFactor = canvas.width / vxMax;
         var maxScalingFactor = 5;
+        
         var context = canvas.getContext("2d");
 
         var offset = {x : 0, y: 0};
@@ -47,36 +50,60 @@
         }
 
         function pan(e) {
+            // Map the current and prev mouse position to virtual coordinates
             var m = rmapv(mouse.x, mouse.y, offset.x, offset.y);
             var ml = rmapv(mouseLock.x, mouseLock.y, offset.x, offset.y);
+            
+            // Adjust offset
             offset.x += ml.x - m.x;
             offset.y += ml.y - m.y;
+            
+            // Offset bounds check
             if(offset.x < 0) offset.x = 0;
             if(offset.y < 0) offset.y = 0;
             if(offset.x + vwidth() > vxMax) offset.x = vxMax - vwidth();
             if(offset.y + vheight() > vyMax) offset.y = vyMax - vheight();
+            
+            // save the current mouse position for the next iteration.
             mouseLock.x = mouse.x;
             mouseLock.y = mouse.y;
+            
             draw();
         }
 
+        /**
+         * Floating point check, with tolerance specification
+         */
         function inDelta(n, c, d) {
             return (n < c + d) && (n > c - d)
         }
 
+        /**
+         * Get the width of the visible part of the virtual canvas.
+         */
         function vwidth() {
             return canvas.width / scalingFactor;
         }
-
+        
+        /**
+         * Get the height of the visible part of the virtual canvas.
+         */
         function vheight() {
             return canvas.height / scalingFactor;
         }
 
+        /**
+         * Track the mouse on the canvas, not strictly necessary, but useful
+         */ 
         canvas.addEventListener("mousemove", function(e) {
             mouse.x = e.offsetX;
             mouse.y = e.offsetY;
         });
 
+        /**
+         * Prints the current virtual coordinates.
+         * Primarily for debugging purposes.
+         */ 
         canvas.addEventListener("click", function(e) {
             var map = rmapv(e.offsetX, e.offsetY, offset.x, offset.y);
             console.log("vloc:", map.x, map.y);
@@ -94,29 +121,40 @@
         });
 
         canvas.addEventListener("wheel", function(e) {
-            var eloc = {x: e.offsetX, y: e.offsetY};
-            var sf = scalingFactor;
-            var map = rmapv(eloc.x, eloc.y, offset.x, offset.y);
+            // mapping the mouse's position to the virtual coordinate system
+            var map = rmapv(mouse.x, mouse.y, offset.x, offset.y);
+            
+            // ratios of mouse positions, relative to the original viewport
+            // previous to scaling either direction.
             var rx = (map.x - offset.x) / vwidth();
             var ry = (map.y - offset.y) / vheight();
+            
             if(e.deltaY < 0) { // zoom out
-                if(!inDelta(vxMax, vwidth(), 1e-10)) {
+                if(!inDelta(vxMax, vwidth(), 1e-10)) { // floating point check, nothing more
                     scalingFactor /= 2;
                 }
             } else { // zoom in
-                if(scalingFactor < maxScalingFactor) {
+                if(scalingFactor < maxScalingFactor) { // scaling factor limit check
                     scalingFactor *= 2;
                 }
             }
+            
+            // adjust the offsets for the new viewport
             offset.x = map.x - rx * vwidth();
             offset.y = map.y - ry * vheight();
+            
+            // offset bounds check
             if(offset.x < 0) offset.x = 0;
             if(offset.y < 0) offset.y = 0;
             if(offset.x + vwidth() > vxMax) offset.x = vxMax - vwidth();
             if(offset.y + vheight() > vyMax) offset.y = vyMax - vheight();
+            
             draw();
         });
-
+        
+        /**
+         * Draws a grid to the canvas. Mainly for testing purposes, testing scaling and position.
+         */
         function draw() {
             context.clearRect(0, 0, canvas.width, canvas.height);
             context.lineCap = "round";
