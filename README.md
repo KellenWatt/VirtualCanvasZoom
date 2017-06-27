@@ -11,7 +11,7 @@ Normally, the recommended idiom is something to the effect of
     context.scale(factor,factor);
     context.translate(-pt.x,-pt.y);
 
-Credit for sample to (this)[https://stackoverflow.com/questions/5189968/zoom-canvas-to-mouse-cursor] Stack Overflow answer.
+Credit for sample to [this](https://stackoverflow.com/questions/5189968/zoom-canvas-to-mouse-cursor) Stack Overflow answer.
 
 This can work, but is very tied to the canvas itself. While the example here is still somewhat tied to the canvas, the logic itself 
 can carry across to Canvas-like constructs in other languages and graphics libraries.
